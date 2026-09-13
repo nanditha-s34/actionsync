@@ -124,7 +124,7 @@
       status.textContent = 'Processing audio with Groq AI...';
 
       try {
-        const res = await fetch('http://127.0.0.1:8000/api/process-audio', {
+        const res = await fetch('https://actionsync.onrender.com', {
           method: 'POST',
           body: formData
         });
