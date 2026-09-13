@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ActionSync | Voice-to-Task</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen py-10 px-4">
+  <div class="max-w-2xl mx-auto space-y-6">
+    
+    <header class="text-center space-y-1">
+      <h1 class="text-3xl font-extrabold text-white">Action<span class="text-indigo-400">Sync</span></h1>
+      <p class="text-slate-400 text-sm">Transform audio recordings into structured action items.</p>
+    </header>
+
+    <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 space-y-4">
+      <input 
+        type="file" 
+        id="audioFile" 
+        accept="audio/*" 
+        class="block w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-indigo-600 file:text-white hover:file:bg-indigo-500 cursor-pointer" 
+      />
+      <button 
+        id="submitBtn" 
+        onclick="processAudio()" 
+        class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg font-medium transition"
+      >
+        Process Audio
+      </button>
+      <p id="status" class="text-xs text-slate-400 text-center hidden"></p>
+    </div>
+
+    <div id="results" class="hidden space-y-4">
+      <div class="bg-slate-800/60 border border-slate-700 p-4 rounded-xl">
+        <h2 class="text-xs uppercase text-slate-400 font-semibold mb-1">Transcript</h2>
+        <p id="transcript" class="text-sm italic text-slate-200"></p>
+      </div>
+      <div id="taskList" class="space-y-3"></div>
+    </div>
+
+  </div>
+
+  <script>
+    async function processAudio() {
+      const fileInput = document.getElementById('audioFile');
+      const status = document.getElementById('status');
+      const submitBtn = document.getElementById('submitBtn');
+      const results = document.getElementById('results');
+      const transcriptEl = document.getElementById('transcript');
+      const taskList = document.getElementById('taskList');
+
+      if (!fileInput.files.length) {
+        alert('Please select an audio file first.');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('file', fileInput.files[0]);
+
+      submitBtn.disabled = true;
+      status.classList.remove('hidden');
+      status.textContent = 'Transcribing and extracting tasks...';
+
+      try {
+        const res = await fetch('http://127.0.0.1:8000/api/process-audio', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!res.ok) throw new Error('Failed to process audio');
+        const data = await res.json();
+
+        transcriptEl.textContent = `"${data.transcript}"`;
+        taskList.innerHTML = '';
+
+        data.tasks.forEach(task => {
+          const card = document.createElement('div');
+          card.className = 'bg-slate-800 border border-slate-700 p-4 rounded-xl flex justify-between items-start';
+          card.innerHTML = `
+            <div>
+              <p class="font-medium text-white">${task.title}</p>
+              <p class="text-xs text-slate-400">Assignee: ${task.assignee || 'Self'} ${task.due_hint ? ' | Due: ' + task.due_hint : ''}</p>
+            </div>
+            <span class="text-xs px-2 py-1 rounded bg-indigo-500/20 text-indigo-300 font-medium">${task.priority}</span>
+          `;
+          taskList.appendChild(card);
+        });
+
+        results.classList.remove('hidden');
+        status.classList.add('hidden');
+      } catch (err) {
+        status.textContent = 'Error: ' + err.message;
+      } finally {
+        submitBtn.disabled = false;
+      }
+    }
+  </script>
+</body>
+</html>
